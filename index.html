@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream-SLAM: Dreaming the Unseen for Active SLAM in Dynamic Environments (Anonymous)</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --accent: #8b5cf6;
+      --accent-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #db2777 100%);
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-glass: rgba(255, 255, 255, 0.88);
+      --border-color: #e2e8f0;
+      --border-focus: #93c5fd;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Glow */
+    .glow-blob {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(219, 39, 119, 0.05) 50%, rgba(255, 255, 255, 0) 70%);
+      border-radius: 50%;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Sticky Navbar */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: var(--bg-glass);
+      border-bottom: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--text-main);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .brand-badge {
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.925rem;
+      transition: color 0.2s ease;
+    }
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* 容器自适应 */
+    .pipeline-container {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .pipeline-view-box {
+        width: 100%;
+        text-align: center;  /* 图片居中 */
+    }
+
+    .pipeline-view-box img {
+        max-width: 100%;
+        max-height: 80vh;    /* 不超过视口高度的80% */
+        height: auto;
+        width: auto;
+        display: block;
+        margin: 0 auto;      /* 居中 */
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      font-size: 0.925rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover {
+      background: var(--primary-light);
+      border-color: var(--border-focus);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .btn-download {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    .btn-download:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+      transform: translateY(-1px);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 4.5rem 0 3rem 0;
+      position: relative;
+    }
+    .anonymous-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.01em;
+    }
+    .anonymous-badge i {
+      color: #ea580c;
+    }
+    .hero-title {
+      font-size: 2.85rem;
+      font-weight: 800;
+      line-height: 1.22;
+      letter-spacing: -0.03em;
+      color: var(--text-main);
+      margin-bottom: 1.25rem;
+    }
+    .hero-title .gradient-text {
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-authors {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .hero-affiliations {
+      font-size: 0.95rem;
+      color: var(--text-light);
+      margin-bottom: 2rem;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Section Global */
+    section {
+      padding: 3.5rem 0;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .section-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      margin-bottom: 0.65rem;
+    }
+    .section-desc {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    /* Abstract Card */
+    .abstract-box {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    .abstract-text {
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: #334155;
+      text-align: justify;
+    }
+
+    /* Feature Grid (3 Pillars) */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .pillar-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.75rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pillar-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .pillar-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .pillar-card:nth-child(2) .pillar-icon {
+      background: #f5f3ff;
+      color: #7c3aed;
+    }
+    .pillar-card:nth-child(3) .pillar-icon {
+      background: #ecfdf5;
+      color: #059669;
+    }
+    .pillar-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .pillar-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Pipeline Showcase */
+    .pipeline-container {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-top: 1.5rem;
+    }
+    .pipeline-view-box {
+      width: 100%;
+      height: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+    .pipeline-view-box object, .pipeline-view-box iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .pipeline-caption {
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* Interactive Tabs */
+    .tabs-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 0.6rem 1.25rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+    }
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Comparison Grid */
+    .comp-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+    }
+    .comp-item {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .comp-item:hover {
+      transform: scale(1.02);
+      box-shadow: var(--shadow-md);
+    }
+    .comp-item.highlight-ours {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      position: relative;
+    }
+    .comp-item img {
+      width: 100%;
+      height: 180px;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      background: #000;
+    }
+    .comp-label {
+      margin-top: 0.75rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+    .comp-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Image Comparison Slider */
+    .slider-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      height: 420px;
+      margin: 2rem auto;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-lg);
+      user-select: none;
+    }
+    .slider-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .slider-img.img-top {
+      clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+      z-index: 2;
+    }
+    .slider-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 4px;
+      background: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+      z-index: 3;
+      cursor: ew-resize;
+      transform: translateX(-50%);
+    }
+    .slider-handle-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      background: #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: var(--primary);
+    }
+    .slider-badge {
+      position: absolute;
+      bottom: 15px;
+      padding: 0.35rem 0.85rem;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      z-index: 4;
+      pointer-events: none;
+    }
+    .slider-badge.badge-left {
+      left: 15px;
+    }
+    .slider-badge.badge-right {
+      right: 15px;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .highlight-row {
+      background-color: #eff6ff;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .best-val {
+      font-weight: 800;
+      color: #16a34a;
+    }
+
+    /* Attachment Download Section */
+    .download-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #ffffff;
+      border-radius: var(--radius-xl);
+      padding: 3rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+      margin: 3rem 0;
+    }
+    .download-card::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(37, 99, 235, 0.4) 0%, rgba(0,0,0,0) 70%);
+      border-radius: 50%;
+    }
+    .download-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+    .download-title {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .download-subtitle {
+      color: #94a3b8;
+      font-size: 1rem;
+      margin-top: 0.35rem;
+    }
+    .files-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+      position: relative;
+      z-index: 1;
+    }
+    .file-item {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+    .file-item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .file-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(37, 99, 235, 0.3);
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+    }
+    .file-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #f8fafc;
+    }
+    .file-meta {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+
+    /* BibTeX Box */
+    .bibtex-card {
+      background: #0f172a;
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      position: relative;
+      margin-top: 1.5rem;
+    }
+    .bibtex-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: none;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.2s ease;
+    }
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 1.5rem;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-box {
+      background: #ffffff;
+      border-radius: var(--radius-lg);
+      max-width: 580px;
+      width: 100%;
+      padding: 2.25rem;
+      box-shadow: var(--shadow-xl);
+      transform: scale(0.95);
+      transition: transform 0.25s ease;
+    }
+    .modal-overlay.active .modal-box {
+      transform: scale(1);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .modal-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 3rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      background: #ffffff;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2.1rem;
+      }
+      .nav-links {
+        display: none;
+      }
+      .slider-container {
+        height: 280px;
+      }
+      .download-card {
+        padding: 1.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-blob"></div>
+
+  <!-- Sticky Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#" class="nav-brand">
+        <i class="fa-solid fa-cube text-primary"></i>
+        <span>Dream-<span class="brand-badge">SLAM</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#method">Method</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#real-world">Real-World</a></li>
+        <li><a href="#attachments">Downloads</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#attachments" class="btn btn-download">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+          <span>Attachment</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="container">
+      <div class="anonymous-badge">
+        <i class="fa-solid fa-lock"></i>
+        <span>Anonymous Submission • Under Peer Review</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="gradient-text">Dream-SLAM:</span> Dreaming the Unseen for<br>
+        Active SLAM in Dynamic Environments
+      </h1>
+
+      <div class="hero-authors">
+        Anonymous Authors
+      </div>
+      <div class="hero-affiliations">
+        Anonymous Institutions & Laboratories
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="hero-actions">
+        <a href="Dream_SLAM__Active_SLAM_via_Dreaming_the_Unseen_in_Dynamic_Environments.pdf" target="_blank" class="btn btn-primary">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span>Paper PDF</span>
+        </a>
+        <a href="supp.pdf" target="_blank" rel="noopener noreferrer" class="btn btn-download">
+          <i class="fa-solid fa-paperclip"></i>
+          <span>Supplementary Document</span>
+        </a>
+
+        <a href="https://anonymous.4open.science/r/Dream-SLAM" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+          <i class="fa-brands fa-github"></i>
+          <span>Code (Anonymous)</span>
+        </a>
+        <a href="#results" class="btn btn-secondary">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Benchmark Results</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Teaser / Abstract Section -->
+  <section id="overview" class="container" style="padding-top: 0;">
+    <div class="abstract-box">
+      <h3 style="font-size: 1.35rem; font-weight: 800; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-sparkles" style="color: #2563eb;"></i> Abstract
+      </h3>
+      <p class="abstract-text">
+        In addition to the core tasks of simultaneous localization and mapping (SLAM), active SLAM additionally involves generating robot actions that enable effective and efficient exploration of unknown environments. However, existing active SLAM pipelines are limited by three main factors: (1) relying on off-the-shelf SLAM modules or assuming static scenes, (2) shortsighted motion planning lacking long-term vision with frequent backtracking, and (3) tracking failures caused by dynamic objects.
+        <br><br>
+        To address these limitations, we propose <strong>Dream-SLAM</strong>, a novel monocular active SLAM method based on <em>dreaming cross-spatio-temporal images</em> and <em>semantically plausible structures</em> of partially observed dynamic environments. The generated cross-spatio-temporal images are fused with real observations to establish foreground constraints, leading to robust camera pose estimation and coherent 3D Gaussian mapping. Furthermore, we integrate dreamed and observed scene structures for long-horizon global exploration planning, producing farsighted trajectories that promote efficient and thorough exploration.
+      </p>
+    </div>
+
+    <!-- Core Pillars Grid -->
+    <div class="pillars-grid">
+      <div class="pillar-card">
+        <div class="pillar-icon">
+          <i class="fa-solid fa-film"></i>
+        </div>
+        <h4 class="pillar-title">Cross-Spatio-Temporal Dreaming</h4>
+        <p class="pillar-desc">
+          Synthesizes virtual views capturing previous 3D foreground at current camera poses using diffusion models, creating robust 3D-2D constraints for dynamic tracking and Gaussian refinement.
+        </p>
+      </div>
+
+      <div class="pillar-card">
+        <div class="pillar-icon">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <h4 class="pillar-title">Feedforward Gaussian Reconstruction</h4>
+        <p class="pillar-desc">
+          Directly predicts per-pixel 3D Gaussians for both static background and dynamic foreground, eliminating complex per-frame iterative optimization.
+        </p>
+      </div>
+
+      <div class="pillar-card">
+        <div class="pillar-icon">
+          <i class="fa-solid fa-route"></i>
+        </div>
+        <h4 class="pillar-title">Semantically Plausible Structure Dreaming</h4>
+        <p class="pillar-desc">
+          Renders candidate waypoints, dreams unseen layouts via semantic inpainting, and globally solves a path to eliminate shortsighted exploration backtracking.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Method & Architecture Deep Dive -->
+  <section id="method" class="container">
+    <div class="section-header">
+      <h2 class="section-title">Dream-SLAM System Architecture</h2>
+      <p class="section-desc">
+        A unified active SLAM framework integrating dreaming mechanisms across localization, 3D mapping, and farsighted trajectory planning.
+      </p>
+    </div>
+
+    <div class="pipeline-container">
+      <div class="pipeline-view-box">
+        <img src="asserts/overview.png"  alt="Dream-SLAM Pipeline Overview" />
+      </div>
+      <div class="pipeline-caption">
+        <strong>Figure 1: Complete Pipeline of Dream-SLAM.</strong> (a) <em>Localization & Mapping:</em> Dreaming cross-spatio-temporal images to build 3D-2D foreground constraints, coupled with feedforward per-pixel 3D Gaussian splatting. (b) <em>Exploration Planning:</em> Virtual camera rendering on unvisited frontier nodes, diffusion-based semantic layout inpainting, and global TSP tour generation.
+      </div>
+    </div>
+  </section>
+
+  <!-- Qualitative & Interactive Visual Comparison -->
+  <section id="results" class="container">
+    <div class="section-header">
+      <h2 class="section-title">Qualitative Mapping & Rendering</h2>
+      <p class="section-desc">
+        Novel-view dynamic rendering comparisons against state-of-the-art dynamic SLAM methods on benchmark datasets.
+      </p>
+    </div>
+
+    <!-- Interactive Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab(event, 'tab-render-comp')">SOTA Comparison (TUM)</button>
+      <button class="tab-btn" onclick="switchTab(event, 'tab-slider-ablation')">Interactive Dream Slider (Ablation)</button>
+      <button class="tab-btn" onclick="switchTab(event, 'tab-topview-planning')">Active Exploration Progress</button>
+    </div>
+
+    <!-- Tab 1: SOTA Comparison Grid -->
+    <div id="tab-render-comp" class="tab-pane active">
+      <div class="comp-grid-4">
+        <div class="comp-item">
+          <img src="asserts/monst3r.png" alt="MonST3R" />
+          <div class="comp-label">MonST3R</div>
+          <div class="comp-sub">Discrete point cloud, blurry</div>
+        </div>
+        <div class="comp-item">
+          <img src="asserts/wildgs.png" alt="WildGS-SLAM" />
+          <div class="comp-label">WildGS-SLAM</div>
+          <div class="comp-sub">Fails on dynamic foreground</div>
+        </div>
+        <div class="comp-item">
+          <img src="asserts/PG-SLAM.png" alt="PG-SLAM" />
+          <div class="comp-label">PG-SLAM</div>
+          <div class="comp-sub">Noticeable distortion artifacts</div>
+        </div>
+        <div class="comp-item highlight-ours">
+          <img src="asserts/ours.png" alt="Dream-SLAM (Ours)" />
+          <div class="comp-label" style="color: var(--primary);">Dream-SLAM (Ours)</div>
+          <div class="comp-sub" style="color: var(--primary); font-weight: 600;">High-fidelity & Complete</div>
+        </div>
+      </div>
+      <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-top: 1rem;">
+        Novel-view rendering comparisons on Sequence <code>wk_xyz</code> of the TUM dataset. Dream-SLAM faithfully reconstructs both dynamic foreground and fine static background.
+      </p>
+    </div>
+
+    <!-- Tab 2: Interactive Before/After Comparison Slider -->
+    <div id="tab-slider-ablation" class="tab-pane">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <span style="font-weight: 600; color: var(--text-main);">Drag the slider to compare Gaussian mapping quality Without vs With Dreamed Views:</span>
+      </div>
+      <div class="slider-container" id="ablation-slider">
+        <img src="asserts/Bonn_wo.png" alt="Without Dreaming" class="slider-img" />
+        <img src="asserts/Bonn_w.png" alt="With Dreaming (Ours)" class="slider-img img-top" id="slider-top-img" />
+        <div class="slider-handle" id="slider-handle">
+          <div class="slider-handle-btn">
+            <i class="fa-solid fa-arrows-left-right"></i>
+          </div>
+        </div>
+        <div class="slider-badge badge-left">Without Dreaming (Blurry / Gaps)</div>
+        <div class="slider-badge badge-right">With Dreaming (Sharp & Coherent)</div>
+      </div>
+    </div>
+
+    <div id="tab-topview-planning" class="tab-pane">
+  <div class="card" style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+      <!-- 第一张图 -->
+      <div>
+        <h4 style="font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">Gibson: Sequence Cantwell</h4>
+        <div style="border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; line-height: 0;">
+          <img src="asserts/Cantwell_topview.png" alt="Gibson: Cantwell Topview" style="width: 100%; height: auto; display: block;" />
+        </div>
+      </div>
+
+      <!-- 第二张图 -->
+      <div>
+        <h4 style="font-weight: 700; margin: 0 0 0.5rem 0; color: var(--text-main);">HM3D: Sequence T7nCRmufFNR</h4>
+        <div style="border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; line-height: 0;">
+          <img src="asserts/T7_topview.png" alt="HM3D: T7 Topview" style="width: 100%; height: auto; display: block;" />
+        </div>
+      </div>
+
+      <!-- 统一说明文字 -->
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+        Top-down comparison of exploration trajectories and reconstructed scenes. By predicting semantically plausible structures, Dream-SLAM plans more efficient paths and significantly reduces total travel distance.
+      </p>
+
+    </div>
+  </div>
+
+
+    <!-- Quantitative Tables -->
+    <div style="margin-top: 3.5rem;">
+      <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem;">
+        <i class="fa-solid fa-table" style="color: var(--primary);"></i> Quantitative Benchmark Performance
+      </h3>
+
+      <!-- Table 1: Localization Comparison -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>TUM Avg RMSE (cm) ↓</th>
+              <th>TUM Avg SD (cm) ↓</th>
+              <th>Bonn Avg RMSE (cm) ↓</th>
+              <th>Bonn Avg SD (cm) ↓</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ORB-SLAM3</td>
+              <td>10.31</td>
+              <td>3.94</td>
+              <td>34.05</td>
+              <td>16.30</td>
+            </tr>
+            <tr>
+              <td>MonST3R</td>
+              <td>21.37</td>
+              <td>10.73</td>
+              <td>15.67</td>
+              <td>8.13</td>
+            </tr>
+            <tr>
+              <td>RoDyn-SLAM</td>
+              <td>5.31</td>
+              <td>2.49</td>
+              <td>11.25</td>
+              <td>4.00</td>
+            </tr>
+            <tr>
+              <td>PG-SLAM</td>
+              <td>4.50</td>
+              <td>1.81</td>
+              <td>6.47</td>
+              <td>2.27</td>
+            </tr>
+            <tr>
+              <td>WildGS-SLAM</td>
+              <td>1.28</td>
+              <td>0.65</td>
+              <td>2.52</td>
+              <td>1.27</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>Dream-SLAM (Ours)</strong></td>
+              <td class="best-val">1.27</td>
+              <td class="best-val">0.48</td>
+              <td class="best-val">1.67</td>
+              <td class="best-val">0.52</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Real-World Deployment Section -->
+  <section id="real-world" class="container">
+    <div class="section-header">
+      <h2 class="section-title">Real-World Robot Experiments</h2>
+      <p class="section-desc">
+        Deployed on an autonomous mobile robot platform equipped with monocular RGB-D sensing navigating through complex dynamic human environments.
+      </p>
+    </div>
+
+    <div class="card" style="padding: 1.5rem;">
+      <div style="border-radius: var(--radius-sm); overflow: hidden; border: 1px solid #e2e8f0; line-height: 0;">
+        <img src="asserts/real_exp.png" alt="Real-World Robot Active Exploration" style="width: 100%; height: auto; display: block;" />
+      </div>
+      <div style="margin-top: 1rem; font-size: 0.95rem; color: var(--text-muted); line-height: 1.5;">
+        <strong>Real-World Robot Active Exploration.</strong> The mobile robot autonomously navigates through dynamic indoor spaces, tracking poses reliably despite human movements and planning smooth, thorough exploration paths.
+      </div>
+    </div>
+  </section>
+
+  <!-- Attachment Download Center -->
+  <section id="attachments" class="container">
+    
+
+    <!-- Anonymous Citation -->
+    <div style="margin-top: 2rem;">
+      <h3 style="font-size: 1.35rem; font-weight: 800;">
+        <i class="fa-solid fa-quote-left" style="color: var(--primary);"></i> Citation (Anonymous)
+      </h3>
+      <div class="bibtex-card">
+        <button class="copy-btn" onclick="copyBibtex()">
+          <i class="fa-regular fa-copy"></i>
+          <span id="copy-btn-text">Copy BibTeX</span>
+        </button>
+        <pre class="bibtex-code" id="bibtex-content">@article{anonymous2026dreamslam,
+  title     = {Dream-SLAM: Dreaming the Unseen for Active SLAM in Dynamic Environments},
+  author    = {Anonymous Authors},
+  journal   = {Under Peer Review},
+  year      = {2026},
+  url       = {https://anonymous.4open.science/r/Dream-SLAM}
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Attachment Download Modal
+  <div class="modal-overlay" id="downloadModal" onclick="closeDownloadModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <i class="fa-solid fa-folder-open text-primary"></i> Attachment Download Package
+        </h3>
+        <button class="modal-close" onclick="closeDownloadModal()">&times;</button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+        Select an attachment component or download the full paper manuscript directly:
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <a href="Dream_SLAM__Active_SLAM_via_Dreaming_the_Unseen_in_Dynamic_Environments%20(42).pdf" download="Dream-SLAM-Full-Manuscript.pdf" class="btn btn-primary" style="justify-content: space-between; border-radius: 12px; padding: 0.85rem 1.25rem;">
+          <span style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>Complete Paper Manuscript (PDF)</span>
+          </span>
+          <i class="fa-solid fa-download"></i>
+        </a>
+
+        <a href="dyna-Gau-SLAM.tex" download="Dream-SLAM-LaTeX-Source.tex" class="btn btn-secondary" style="justify-content: space-between; border-radius: 12px; padding: 0.85rem 1.25rem;">
+          <span style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fa-solid fa-code"></i>
+            <span>LaTeX Source File (.tex)</span>
+          </span>
+          <i class="fa-solid fa-download"></i>
+        </a>
+
+        <a href="fig/overview/overview2.pdf" download="Dream-SLAM-Architecture-Vector.pdf" class="btn btn-secondary" style="justify-content: space-between; border-radius: 12px; padding: 0.85rem 1.25rem;">
+          <span style="display: flex; align-items: center; gap: 0.75rem;">
+            <i class="fa-solid fa-diagram-project"></i>
+            <span>System Pipeline Diagram (Vector PDF)</span>
+          </span>
+          <i class="fa-solid fa-download"></i>
+        </a>
+      </div>
+
+      <div style="margin-top: 1.75rem; text-align: center;">
+        <button onclick="closeDownloadModal()" class="btn btn-secondary" style="width: 100%;">
+          Close Window
+        </button>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">
+        Dream-SLAM Project Page (Anonymous Submission)
+      </p>
+      <p>Designed for double-blind academic peer review. All identifying metadata sanitized.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    // Tab Switching
+    function switchTab(evt, tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+      evt.currentTarget.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // Modal Controls
+    function openDownloadModal() {
+      document.getElementById('downloadModal').classList.add('active');
+    }
+    function closeDownloadModal(e) {
+      if (!e || e.target === document.getElementById('downloadModal') || e.target.classList.contains('modal-close')) {
+        document.getElementById('downloadModal').classList.remove('active');
+      }
+    }
+
+    // Copy BibTeX
+    function copyBibtex() {
+      const text = document.getElementById('bibtex-content').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.innerText = 'Copied!';
+        setTimeout(() => {
+          btnText.innerText = 'Copy BibTeX';
+        }, 2000);
+      });
+    }
+
+    // Interactive Image Comparison Slider
+    const sliderContainer = document.getElementById('ablation-slider');
+    const sliderTopImg = document.getElementById('slider-top-img');
+    const sliderHandle = document.getElementById('slider-handle');
+
+    if (sliderContainer && sliderTopImg && sliderHandle) {
+      let isDragging = false;
+
+      function updateSlider(x) {
+        const rect = sliderContainer.getBoundingClientRect();
+        let pos = ((x - rect.left) / rect.width) * 100;
+        pos = Math.max(0, Math.min(100, pos));
+
+        sliderTopImg.style.clipPath = `polygon(0 0, ${pos}% 0, ${pos}% 100%, 0 100%)`;
+        sliderHandle.style.left = `${pos}%`;
+      }
+
+      sliderContainer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        updateSlider(e.clientX);
+      });
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        updateSlider(e.clientX);
+      });
+
+      // Touch events
+      sliderContainer.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        updateSlider(e.touches[0].clientX);
+      });
+      window.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+      window.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        updateSlider(e.touches[0].clientX);
+      });
+    }
+  </script>
+</body>
+</html>
