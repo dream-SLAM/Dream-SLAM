@@ -12,6 +12,18 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <style>
+  .section-header {
+    margin-bottom: 0;
+  }
+  .section-title {
+    margin: 0 0 0 0; /* 清除h2上下margin */
+  }
+  .video-container {
+    margin-top: 0;
+  }
+  </style>
+
+  <style> 
     :root {
       --primary: #2563eb;
       --primary-hover: #1d4ed8;
@@ -382,6 +394,44 @@
       border: none;
     }
     .pipeline-caption {
+      margin-top: 1rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    /* Video Showcase */
+    .video-container {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-top: 1.5rem;
+    }
+    #video .section-header {
+      margin-bottom: 0.75rem;
+    }
+    #video .video-container {
+      margin-top: 0;
+    }
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #000000;
+      line-height: 0;
+    }
+    .video-wrapper video {
+      width: 100%;
+      max-height: 80vh;
+      display: block;
+      margin: 0 auto;
+      border-radius: var(--radius-sm);
+    }
+    .video-caption {
       margin-top: 1rem;
       font-size: 0.95rem;
       color: var(--text-muted);
@@ -795,6 +845,7 @@
       <ul class="nav-links">
         <li><a href="#overview">Overview</a></li>
         <li><a href="#method">Method</a></li>
+        <li><a href="#video">Video</a></li>
         <li><a href="#results">Results</a></li>
         <li><a href="#real-world">Real-World</a></li>
         <li><a href="#attachments">Downloads</a></li>
@@ -864,7 +915,7 @@
       </p>
     </div>
 
-    <!-- Core Pillars Grid -->
+    <!-- Core Pillars Grid
     <div class="pillars-grid">
       <div class="pillar-card">
         <div class="pillar-icon">
@@ -896,8 +947,31 @@
         </p>
       </div>
     </div>
+  </section> -->
+
+  <!-- Video Demonstration Section -->
+  <section id="video" class="container">
+    <div class="section-header">
+      <h2 class="section-title">Overview</h2>
+      <!-- <p class="section-desc">
+        Watch Dream-SLAM in action, highlighting dynamic tracking robustness, cross-spatio-temporal dreaming, and long-horizon active exploration.
+      </p> -->
+    </div>
+
+    <div class="video-container">
+      <div class="video-wrapper">
+        <video controls autoplay muted loop playsinline preload="metadata">
+          <source src="asserts/overview.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <div class="video-caption">
+        <strong>Video 1: Demonstration of Dream-SLAM.</strong> Real-time monocular dynamic SLAM, dreaming-enhanced Gaussian mapping, and autonomous exploration in complex indoor environments.
+      </div>
+    </div>
   </section>
 
+  
   <!-- Method & Architecture Deep Dive -->
   <section id="method" class="container">
     <div class="section-header">
@@ -916,6 +990,8 @@
       </div>
     </div>
   </section>
+
+  
 
   <!-- Qualitative & Interactive Visual Comparison -->
   <section id="results" class="container">
@@ -965,7 +1041,7 @@
     <!-- Tab 2: Interactive Before/After Comparison Slider -->
     <div id="tab-slider-ablation" class="tab-pane">
       <div style="text-align: center; margin-bottom: 1rem;">
-        <span style="font-weight: 600; color: var(--text-main);">Drag the slider to compare Gaussian mapping quality Without vs With Dreamed Views:</span>
+        <span style="font-weight: 600; color: var(--text-main);">Drag the slider to compare Gaussian mapping quality Without vs With Dreamed Views Optimization:</span>
       </div>
       <div class="slider-container" id="ablation-slider">
         <img src="asserts/Bonn_wo.png" alt="Without Dreaming" class="slider-img" />
